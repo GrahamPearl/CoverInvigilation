@@ -16,11 +16,13 @@ const app = {
    * Initialize app
    */
   init() {
-    this.setupEventListeners();
-    this.loadFromStorage();
-    this.updateConnectionStatus();
-    this.refreshDashboard();
-  },
+  app.setupEventListeners();
+  app.loadFromStorage();
+  app.updateConnectionStatus();
+  app.refreshDashboard();
+},
+
+
 
   refreshDashboard() {
     const stats = app.getStats();
@@ -75,8 +77,8 @@ const app = {
     });
 
     // Connection monitor
-    window.addEventListener("online", () => this.updateConnectionStatus());
-    window.addEventListener("offline", () => this.updateConnectionStatus());
+    window.addEventListener("online", () => app.updateConnectionStatus());
+    window.addEventListener("offline", () => app.updateConnectionStatus());
   },
 
   /**
@@ -108,8 +110,8 @@ const app = {
     let processed = 0;
     const processComplete = () => {
       if (++processed === 2) {
-        this.saveToStorage();
-        this.refreshDashboard();
+        app.saveToStorage();
+        app.refreshDashboard();
         showMessage("Files processed successfully", "success");
       }
     };
@@ -120,7 +122,7 @@ const app = {
       try {
         const wb = XLSX.read(e.target.result, { type: "array" });
         const ws = wb.Sheets[wb.SheetNames[0]];
-        this.state.assignments = XLSX.utils.sheet_to_json(ws).map((r) => ({
+        app.state.assignments = XLSX.utils.sheet_to_json(ws).map((r) => ({
           date: r.Date || r.date || "",
           session: parseInt(r.Session || r.session || 1),
           grade: String(r.Grade || r.grade || ""),
@@ -148,7 +150,7 @@ const app = {
       try {
         const wb = XLSX.read(e.target.result, { type: "array" });
         const ws = wb.Sheets[wb.SheetNames[0]];
-        this.state.teachers = XLSX.utils
+        app.state.teachers = XLSX.utils
           .sheet_to_json(ws)
           .map((r) => ({
             name: r.Educator || r.Name || r.name || "",
@@ -177,15 +179,15 @@ const app = {
    * Get teacher by name
    */
   getTeacher(name) {
-    return this.state.teachers.find((t) => t.name === name);
+    return app.state.teachers.find((t) => t.name === name);
   },
 
   /**
    * Get workload hours for teacher
    */
   getTeacherWorkload(name) {
-    return this.state.assignments.reduce((sum, a, idx) => {
-      const assigned = a.educator || this.state.allocations.get(idx);
+    return app.state.assignments.reduce((sum, a, idx) => {
+      const assigned = a.educator || app.state.allocations.get(idx);
       return assigned === name ? sum + (a.timeshift || 0) : sum;
     }, 0);
   },
@@ -194,8 +196,8 @@ const app = {
    * Get teacher assignment count
    */
   getTeacherSlotCount(name) {
-    return this.state.assignments.filter((a, idx) => {
-      const assigned = a.educator || this.state.allocations.get(idx);
+    return app.state.assignments.filter((a, idx) => {
+      const assigned = a.educator || app.state.allocations.get(idx);
       return assigned === name;
     }).length;
   },
@@ -205,7 +207,7 @@ const app = {
    */
   assignToSlot(idx, teacher, reason = "Manual assignment") {
     const existing =
-      this.state.assignments[idx].educator || this.state.allocations.get(idx);
+      app.state.assignments[idx].educator || app.state.allocations.get(idx);
 
     // Never replace existing allocations
     if (existing) {
@@ -213,14 +215,14 @@ const app = {
       return false;
     }
 
-    this.state.allocations.set(idx, teacher);
-    this.state.allocationReasons.set(idx, {
+    app.state.allocations.set(idx, teacher);
+    app.state.allocationReasons.set(idx, {
       teacher,
       reason,
       timestamp: new Date().toISOString(),
     });
 
-    this.saveToStorage();
+    app.saveToStorage();
     return true;
   },
 
@@ -228,22 +230,22 @@ const app = {
    * Get allocation reason for debugging
    */
   getAllocationReason(idx) {
-    return this.state.allocationReasons.get(idx) || null;
+    return app.state.allocationReasons.get(idx) || null;
   },
 
   /**
    * Save to localStorage
    */
   saveToStorage() {
-    localStorage.setItem("assignments", JSON.stringify(this.state.assignments));
-    localStorage.setItem("teachers", JSON.stringify(this.state.teachers));
+    localStorage.setItem("assignments", JSON.stringify(app.state.assignments));
+    localStorage.setItem("teachers", JSON.stringify(app.state.teachers));
     localStorage.setItem(
       "allocations",
-      JSON.stringify(Array.from(this.state.allocations.entries())),
+      JSON.stringify(Array.from(app.state.allocations.entries())),
     );
     localStorage.setItem(
       "reasons",
-      JSON.stringify(Array.from(this.state.allocationReasons.entries())),
+      JSON.stringify(Array.from(app.state.allocationReasons.entries())),
     );
   },
 
@@ -256,10 +258,10 @@ const app = {
     const alloc = localStorage.getItem("allocations");
     const reasons = localStorage.getItem("reasons");
 
-    if (a) this.state.assignments = JSON.parse(a);
-    if (t) this.state.teachers = JSON.parse(t);
-    if (alloc) this.state.allocations = new Map(JSON.parse(alloc));
-    if (reasons) this.state.allocationReasons = new Map(JSON.parse(reasons));
+    if (a) app.state.assignments = JSON.parse(a);
+    if (t) app.state.teachers = JSON.parse(t);
+    if (alloc) app.state.allocations = new Map(JSON.parse(alloc));
+    if (reasons) app.state.allocationReasons = new Map(JSON.parse(reasons));
   },
 
   /**
@@ -268,16 +270,16 @@ const app = {
   getWorkloadData() {
     const teachers = [
       ...new Set(
-        this.state.assignments
-          .map((a, idx) => a.educator || this.state.allocations.get(idx))
+        app.state.assignments
+          .map((a, idx) => a.educator || app.state.allocations.get(idx))
           .filter(Boolean),
       ),
     ];
 
     return teachers.map((name) => ({
       name,
-      hours: this.getTeacherWorkload(name),
-      slots: this.getTeacherSlotCount(name),
+      hours: app.getTeacherWorkload(name),
+      slots: app.getTeacherSlotCount(name),
     }));
   },
 
@@ -285,15 +287,15 @@ const app = {
    * Get statistics
    */
   getStats() {
-    const assigned = this.state.assignments.filter(
-      (a, idx) => a.educator || this.state.allocations.get(idx),
+    const assigned = app.state.assignments.filter(
+      (a, idx) => a.educator || app.state.allocations.get(idx),
     ).length;
 
     return {
-      totalSlots: this.state.assignments.length,
+      totalSlots: app.state.assignments.length,
       assigned,
-      unassigned: this.state.assignments.length - assigned,
-      teachers: this.state.teachers.length,
+      unassigned: app.state.assignments.length - assigned,
+      teachers: app.state.teachers.length,
     };
   },
 };
@@ -332,7 +334,7 @@ function switchSection(id) {
   if (id === "reports") setTimeout(() => generateCharts(), 100);
 }
 
-function refreshDashboard() {
+function old_refreshDashboard() {
   const stats = app.getStats();
   document.getElementById("stat-slots").textContent = stats.totalSlots;
   document.getElementById("stat-assigned").textContent = stats.assigned;
