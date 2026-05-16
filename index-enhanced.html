@@ -1,16 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Smart exam invigilation scheduler with AI assistance">
     <title>Exam Invigilation Scheduler</title>
-    
+
     <link rel="stylesheet" href="./public/bootstrap.bundle.min.js">
     <link rel="stylesheet" href="./public/all.min.css">
     <script src="./public/chart.min.js"></script>
     <script src="./public/xlsx.full.min.js"></script>
-    
+
     <style>
         :root {
             --primary: #1e3a5f;
@@ -141,8 +142,15 @@
         }
 
         @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
         }
 
         .content {
@@ -430,13 +438,15 @@
                 grid-template-columns: 1fr;
             }
 
-            th, td {
+            th,
+            td {
                 padding: 0.75rem;
                 font-size: 0.85rem;
             }
         }
     </style>
 </head>
+
 <body>
     <!-- Sidebar -->
     <div class="sidebar">
@@ -444,12 +454,18 @@
             <h2><i class="fas fa-clipboard-list"></i> Exam Scheduler</h2>
         </div>
         <nav>
-            <div class="nav-item"><a href="#" onclick="switchSection('dashboard')" class="active"><i class="fas fa-chart-line"></i> Dashboard</a></div>
-            <div class="nav-item"><a href="#" onclick="switchSection('upload')"><i class="fas fa-upload"></i> Upload</a></div>
-            <div class="nav-item"><a href="#" onclick="switchSection('schedule')"><i class="fas fa-calendar"></i> Schedule</a></div>
-            <div class="nav-item"><a href="#" onclick="switchSection('allocation')"><i class="fas fa-magic"></i> Allocate</a></div>
-            <div class="nav-item"><a href="#" onclick="switchSection('reports')"><i class="fas fa-chart-bar"></i> Reports</a></div>
-            <div class="nav-item"><a href="#" onclick="switchSection('ai-assist')"><i class="fas fa-brain"></i> AI Assist</a></div>
+            <div class="nav-item"><a href="#" onclick="switchSection('dashboard')" class="active"><i
+                        class="fas fa-chart-line"></i> Dashboard</a></div>
+            <div class="nav-item"><a href="#" onclick="switchSection('upload')"><i class="fas fa-upload"></i> Upload</a>
+            </div>
+            <div class="nav-item"><a href="#" onclick="switchSection('schedule')"><i class="fas fa-calendar"></i>
+                    Schedule</a></div>
+            <div class="nav-item"><a href="#" onclick="switchSection('allocation')"><i class="fas fa-magic"></i>
+                    Allocate</a></div>
+            <div class="nav-item"><a href="#" onclick="switchSection('reports')"><i class="fas fa-chart-bar"></i>
+                    Reports</a></div>
+            <div class="nav-item"><a href="#" onclick="switchSection('ai-assist')"><i class="fas fa-brain"></i> AI
+                    Assist</a></div>
         </nav>
     </div>
 
@@ -504,7 +520,9 @@
                                     </tr>
                                 </thead>
                                 <tbody id="recent-table">
-                                    <tr><td colspan="5" style="text-align:center; color: #999;">No data</td></tr>
+                                    <tr>
+                                        <td colspan="5" style="text-align:center; color: #999;">No data</td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
@@ -523,14 +541,18 @@
                             <label class="form-label">Assignments File</label>
                             <div class="upload-area" id="upload-1">
                                 <input type="file" id="file1" accept=".xlsx,.xls" style="display:none;">
-                                <p style="margin:0;"><i class="fas fa-cloud-upload-alt" style="font-size:2rem;margin-bottom:1rem;display:block;color:var(--accent);"></i><strong>Click or drag</strong> assignments XLSX</p>
+                                <p style="margin:0;"><i class="fas fa-cloud-upload-alt"
+                                        style="font-size:2rem;margin-bottom:1rem;display:block;color:var(--accent);"></i><strong>Click
+                                        or drag</strong> assignments XLSX</p>
                             </div>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Teachers File</label>
                             <div class="upload-area" id="upload-2">
                                 <input type="file" id="file2" accept=".xlsx,.xls" style="display:none;">
-                                <p style="margin:0;"><i class="fas fa-cloud-upload-alt" style="font-size:2rem;margin-bottom:1rem;display:block;color:var(--accent);"></i><strong>Click or drag</strong> teachers XLSX</p>
+                                <p style="margin:0;"><i class="fas fa-cloud-upload-alt"
+                                        style="font-size:2rem;margin-bottom:1rem;display:block;color:var(--accent);"></i><strong>Click
+                                        or drag</strong> teachers XLSX</p>
                             </div>
                         </div>
                         <button class="btn btn-primary" onclick="processUpload()">
@@ -551,7 +573,8 @@
                     </div>
                     <div class="card-body">
                         <div style="margin-bottom:1rem;">
-                            <select id="filter-date" onchange="refreshSchedule()" class="form-input" style="max-width:250px;">
+                            <select id="filter-date" onchange="refreshSchedule()" class="form-input"
+                                style="max-width:250px;">
                                 <option value="">All Dates</option>
                             </select>
                         </div>
@@ -569,7 +592,9 @@
                                     </tr>
                                 </thead>
                                 <tbody id="schedule-table">
-                                    <tr><td colspan="7" style="text-align:center;color:#999;">No data</td></tr>
+                                    <tr>
+                                        <td colspan="7" style="text-align:center;color:#999;">No data</td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
@@ -582,12 +607,23 @@
                 <div class="card">
                     <div class="card-header">
                         <h3>Smart Allocation</h3>
-                        <button class="btn btn-primary btn-small" onclick="autoAllocate()">
-                            <i class="fas fa-magic"></i> Auto Allocate
-                        </button>
+                        <div style="display:flex; gap:0.5rem;">
+                            <button class="btn btn-primary btn-small" onclick="autoAllocate()">
+                                <i class="fas fa-magic"></i> Auto Allocate
+                            </button>
+
+                            <button class="btn btn-small" style="background:#dc2626; color:white;" onclick="resetAllocations()">
+                                <i class="fas fa-trash"></i> Reset
+                            </button>
+
+                            <button class="btn btn-small" style="background:#dc2626; color:white;" onclick="resetAllAllocations()">
+                                <i class="fas fa-trash"></i> Reset All
+                            </button>
+                        </div>
                     </div>
                     <div class="card-body">
-                        <p style="margin-bottom:1rem;color:#666;">Auto-allocate teachers with fair workload distribution by timeShift</p>
+                        <p style="margin-bottom:1rem;color:#666;">Auto-allocate teachers with fair workload distribution
+                            by timeShift</p>
                         <div id="allocation-results"></div>
                     </div>
                 </div>
@@ -605,7 +641,8 @@
                         </div>
                         <div style="margin-bottom:1.5rem;">
                             <h5>Workload Heatmap (Hours by Teacher)</h5>
-                            <div id="heatmap" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:0.5rem;">
+                            <div id="heatmap"
+                                style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:0.5rem;">
                             </div>
                         </div>
                         <button class="btn btn-primary" onclick="exportWorkloadReport()">
@@ -624,10 +661,12 @@
                     <div class="card-body">
                         <div class="ai-panel">
                             <h5 style="margin-bottom:1rem;">Natural Language Assignment</h5>
-                            <p style="font-size:0.9rem;margin-bottom:1rem;color:#666;">Describe your allocation needs, and AI will suggest optimal placements.</p>
+                            <p style="font-size:0.9rem;margin-bottom:1rem;color:#666;">Describe your allocation needs,
+                                and AI will suggest optimal placements.</p>
                             <div class="form-group">
                                 <label class="form-label">Your Request</label>
-                                <textarea id="ai-prompt" class="form-input" rows="4" placeholder="e.g., 'Allocate Grade 12 exams fairly to experienced teachers' or 'Balance workload - no teacher should exceed 35 hours'"></textarea>
+                                <textarea id="ai-prompt" class="form-input" rows="4"
+                                    placeholder="e.g., 'Allocate Grade 12 exams fairly to experienced teachers' or 'Balance workload - no teacher should exceed 35 hours'"></textarea>
                             </div>
                             <div style="display:flex;gap:1rem;">
                                 <button class="btn btn-primary" onclick="submitAIRequest()">
@@ -650,4 +689,5 @@
     <script src="reporting-charts.js"></script>
     <script src="ai-integration.js"></script>
 </body>
+
 </html>

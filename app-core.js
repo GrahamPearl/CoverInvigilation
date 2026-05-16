@@ -16,13 +16,41 @@ const app = {
    * Initialize app
    */
   init() {
-  app.setupEventListeners();
-  app.loadFromStorage();
-  app.updateConnectionStatus();
-  app.refreshDashboard();
-},
+    app.setupEventListeners();
+    app.loadFromStorage();
+    app.updateConnectionStatus();
+    app.refreshDashboard();
+  },
 
+  resetAll() {
+    this.state.assignments = [];
+    this.state.teachers = [];
+    this.state.allocations.clear();
+    this.state.allocationReasons.clear();
 
+    localStorage.clear();
+
+    this.refreshDashboard();
+
+    showMessage("Application fully reset", "success");
+  },
+
+  resetAllocations() {
+    // Clear allocations and reasons
+    app.state.allocations.clear();
+    app.state.allocationReasons.clear();
+
+    // Optional: also clear educator field from assignments
+    app.state.assignments.forEach((a) => (a.educator = null));
+
+    // Save cleared state
+    app.saveToStorage();
+
+    // Refresh UI
+    app.refreshDashboard();
+
+    showMessage("Allocations reset successfully", "success");
+  },
 
   refreshDashboard() {
     const stats = app.getStats();
@@ -42,7 +70,10 @@ const app = {
 
     tbody.innerHTML = recent
       .map((row, idx) => {
-        const teacher = row.educator || app.state.allocations.get(idx) || "-";
+        const teacher =
+          this.state.allocations.get(idx) ||
+          app.state.allocations.get(idx) ||
+          "-";
         const status =
           teacher !== "-"
             ? '<span class="badge badge-assigned">✓ Assigned</span>'
@@ -123,9 +154,49 @@ const app = {
         const wb = XLSX.read(e.target.result, { type: "array" });
         const ws = wb.Sheets[wb.SheetNames[0]];
         app.state.assignments = XLSX.utils.sheet_to_json(ws).map((r) => ({
-          date: r.Date || r.date || "",
+          // date: r.Date || r.date || "",
+          // date: r.Date || r.date || "",
+          date: (function (val) {
+            if (!val) return "";
+
+            // ✅ EXCEL SERIAL NUMBER FIX (CRITICAL)
+            if (typeof val === "number") {
+              const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+              const result = new Date(excelEpoch.getTime() + val * 86400000);
+              return result.toISOString().split("T")[0];
+            }
+
+            // ✅ If already a Date object
+            if (val instanceof Date) {
+              return val.toISOString().split("T")[0];
+            }
+
+            const str = String(val).trim();
+
+            // ✅ Handle MM/DD/YYYY
+            const parts = str.split("/");
+            if (parts.length === 3) {
+              const [mm, dd, yyyy] = parts;
+              if (yyyy && mm && dd) {
+                return `${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
+              }
+            }
+
+            // ✅ Fallback
+            const parsed = new Date(str);
+            return isNaN(parsed) ? "" : parsed.toISOString().split("T")[0];
+          })(r.Date ?? r.date),
+
           session: parseInt(r.Session || r.session || 1),
-          grade: String(r.Grade || r.grade || ""),
+
+          // grade: String(r.Grade || r.grade || ""),
+          grade: (function (val) {
+            if (!val) return "";
+            return String(val)
+              .replace(/grade\s*/i, "")
+              .trim();
+          })(r.Grade || r.grade),
+
           exam: r.Exam || r.exam || "",
           venue: String(r["Venue Number"] || r.Venue || r.venue || ""),
           timeshift: parseFloat(
@@ -136,10 +207,14 @@ const app = {
             String(r["Is Zulu"] || r.is_zulu || "false").toLowerCase() ===
             "true",
         }));
-        processComplete();
+
+        // processComplete();
+        console.log("Parsed teachers:", app.state.teachers);
       } catch (err) {
         showMessage("Error reading assignments: " + err.message, "error");
-        processComplete();
+
+        // processComplete();
+        console.log("Parsed teachers:", app.state.teachers);
       }
     };
     reader1.readAsArrayBuffer(file1);
@@ -154,23 +229,35 @@ const app = {
           .sheet_to_json(ws)
           .map((r) => ({
             name: r.Educator || r.Name || r.name || "",
-            registerClass:
-              r["Register class"] ||
-              r["Register Class"] ||
-              r.registerClass ||
-              "",
-            learners: parseInt(r.Learners || r.learners || 0),
-            is_zulu:
-              String(
-                r.Zulu || r["Is Zulu"] || r.is_zulu || "false",
-              ).toLowerCase() === "true",
+
+            // registerClass: r["Register class"] || r["Register Class"] || r.registerClass || "",
+            registerClass: (function (val) {
+              if (!val) return "";
+              return String(val)
+                .replace(/grade\s*/i, "")
+                .trim();
+            })(r["Register class"] || r["Register Class"] || r.registerClass),
+
+            // is_zulu: String(r.Zulu || r["Is Zulu"] || r.is_zulu || "false").toLowerCase() === "true",
+            is_zulu: (function (val) {
+              if (val === true) return true;
+              if (!val) return false;
+              const v = String(val).toLowerCase().trim();
+              return v === "true" || v === "yes" || v === "y";
+            })(r.Zulu ?? r["Is Zulu"] ?? r.is_zulu),
           }))
           .filter((t) => t.name);
-        processComplete();
+
+        // processComplete();
+        console.log("Parsed teachers:", app.state.teachers);
       } catch (err) {
         showMessage("Error reading teachers: " + err.message, "error");
-        processComplete();
+
+        // processComplete();
+        console.log("Parsed teachers:", app.state.teachers);
       }
+
+      console.log("Teachers loaded:", app.state.teachers);
     };
     reader2.readAsArrayBuffer(file2);
   },
@@ -180,6 +267,18 @@ const app = {
    */
   getTeacher(name) {
     return app.state.teachers.find((t) => t.name === name);
+  },
+
+  matchesGrade(teacher, assignment) {
+    if (!teacher || !assignment) return false;
+
+    const tGrade = (teacher.registerClass || "").toUpperCase();
+    const aGrade = (assignment.grade || "").toUpperCase();
+
+    // ROTATE = wildcard
+    if (tGrade === "ROTATE") return true;
+
+    return tGrade === aGrade;
   },
 
   /**
@@ -352,7 +451,10 @@ function old_refreshDashboard() {
 
   tbody.innerHTML = recent
     .map((row, idx) => {
-      const teacher = row.educator || app.state.allocations.get(idx) || "-";
+      const teacher =
+        this.state.allocations.get(idx) ||
+        app.state.allocations.get(idx) ||
+        "-";
       const status =
         teacher !== "-"
           ? '<span class="badge badge-assigned">✓ Assigned</span>'
@@ -368,6 +470,16 @@ function old_refreshDashboard() {
     .join("");
 }
 
+function resetAllocations() {
+  if (!confirm("Are you sure you want to reset current allocations?")) return;
+  app.resetAllocations();
+}
+
+function resetAllAllocations() {
+  if (!confirm("Are you sure you want to reset all allocations?")) return;
+  app.resetAll();
+}
+
 function populateDateFilter() {
   const dates = [
     ...new Set(app.state.assignments.map((a) => a.date).filter(Boolean)),
@@ -377,19 +489,36 @@ function populateDateFilter() {
   while (select.options.length > 1) select.remove(1);
   dates.forEach((d) => {
     const opt = document.createElement("option");
-    opt.value = d;
-    opt.textContent = new Date(d + "T00:00").toLocaleDateString();
+    // opt.value = d;
+    opt.value = d; // ✅ KEEP ISO value for filtering
+
+    // opt.textContent = new Date(d).toLocaleDateString("en-GB");
+    opt.textContent = (function (dateStr) {
+      if (!dateStr) return "";
+      const [y, m, day] = dateStr.split("-");
+      return `${day}/${m}/${y}`; // ✅ display only
+    })(d);
+
     select.appendChild(opt);
   });
+}
+
+function normalizeGrade(val) {
+  if (!val) return "";
+  return String(val)
+    .replace(/grade\s*/i, "")
+    .trim();
 }
 
 function refreshSchedule() {
   const dateVal = document.getElementById("filter-date").value;
   let filtered = app.state.assignments;
 
+  // Filter based on the selected date string
   if (dateVal) filtered = filtered.filter((a) => a.date === dateVal);
 
   const tbody = document.getElementById("schedule-table");
+  
   if (filtered.length === 0) {
     tbody.innerHTML =
       '<tr><td colspan="7" style="text-align:center;color:#999;">No data</td></tr>';
@@ -397,14 +526,16 @@ function refreshSchedule() {
   }
 
   tbody.innerHTML = filtered
-    .map((row, idx) => {
+    .map((row) => {
+      // Find where this exact row lives in the master array to get its allocation
       const actualIdx = app.state.assignments.indexOf(row);
-      const teacher =
-        row.educator || app.state.allocations.get(actualIdx) || "-";
+      const teacher = app.state.allocations.get(actualIdx) || "-";
+      
       const status =
         teacher !== "-"
           ? '<span class="badge badge-assigned">✓</span>'
           : '<span class="badge badge-unassigned">✗</span>';
+          
       return `<tr>
             <td>${row.date}</td>
             <td>${row.session}</td>
@@ -447,14 +578,29 @@ function autoAllocate() {
     '<p><i class="fas fa-spinner fa-spin"></i> Processing...</p>';
 
   setTimeout(() => {
-    const result = scheduleWithReasons(
+    /*const result = scheduleWithReasons(
       app.state.assignments,
       app.state.teachers,
       app.state.allocations,
     );
+    */
+
+    const filteredTeachers = app.state.teachers;
+
+    const result = scheduleWithReasons(
+      app.state.assignments.map((a) => ({
+        ...a,
+        validTeachers: filteredTeachers.filter(
+          (t) => app.matchesGrade(t, a) && (!a.is_zulu || t.is_zulu),
+        ),
+      })),
+      filteredTeachers,
+      app.state.allocations,
+    );
+
     displayAllocationResults(result);
     app.saveToStorage();
-    refreshDashboard();
+    app.refreshDashboard();
   }, 100);
 }
 
